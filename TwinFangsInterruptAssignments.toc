@@ -1,0 +1,19 @@
+## Interface: 120100
+## Title: Twin Fangs Interrupt Assignments
+## Notes: Numbers add nameplates on The Twin Fangs so interrupts can be assigned per add.
+## Author: Kinetyk
+## Version: 1.0.0
+## SavedVariables: TwinFangsInterruptAssignmentsDB
+## Category: Dungeons & Raids
+## IconTexture: Interface\Icons\ability_kick
+
+Libs\LibStub\LibStub.lua
+Libs\CallbackHandler-1.0\CallbackHandler-1.0.lua
+Libs\LibSharedMedia-3.0\LibSharedMedia-3.0.lua
+
+Core.lua
+Nameplates.lua
+Reminder.lua
+Assignments.lua
+VersionCheck.lua
+Options.lua

@@ -1,0 +1,5 @@
+# Editor/refactor leftovers.
+*.bak
+
+# WoW writes these next to the addon when it saves; not part of the source.
+*.lua.bak

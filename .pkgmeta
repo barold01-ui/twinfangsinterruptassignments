@@ -1,0 +1,16 @@
+package-as: TwinFangsInterruptAssignments
+
+# CurseForge zips the whole tagged tree minus these. Anything not loaded by
+# TwinFangsInterruptAssignments.toc belongs here (or in .gitignore) -- dead Lua
+# in the zip is dead weight the client still has to ship to every user.
+#
+# Libs/ is deliberately NOT ignored: LibStub, CallbackHandler-1.0 and
+# LibSharedMedia-3.0 are checked in and loaded by the .toc, so they ship.
+ignore:
+  - README.md
+  - .git
+  - .gitignore
+  - .github
+  - .claude
+  - CLAUDE.md
+  - "*.bak"
