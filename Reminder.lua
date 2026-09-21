@@ -55,6 +55,7 @@ end
 
 local frame = CreateFrame("Frame", nil, UIParent)
 frame:SetFrameStrata("HIGH")
+frame:SetClampedToScreen(true)
 frame.Icon = frame:CreateTexture(nil, "ARTWORK")
 frame.Icon:SetPoint("LEFT")
 frame.Icon:SetTexCoord(0.08, 0.92, 0.08, 0.92) -- crop the blocky edge baked into spell icons
@@ -78,15 +79,15 @@ frame.Text = frame.TextFrame:CreateFontString(nil, "OVERLAY")
 frame.Text:SetPoint("LEFT", frame.Icon, "RIGHT", 8, 0)
 frame:Hide()
 
-frame:SetScript("OnUpdate", function()
-    local remaining = hideAt - GetTime()
-    if remaining <= 0 then
-        frame:Hide()
-        PlayReminderSound()
-        return
+local function ReminderText()
+    local db = TFIA.db
+    if not TFIA:IsAssigned() then
+        return "No kick assigned"
+    elseif db.side == "None" then
+        return string.format("Kick #%d", db.myNumber)
     end
-    frame.Countdown:SetText(math.ceil(remaining))
-end)
+    return string.format("Kick #%d %s", db.myNumber, db.side)
+end
 
 local function StyleReminder()
     local db = TFIA.db
@@ -95,18 +96,82 @@ local function StyleReminder()
     frame.Icon:SetTexture(KickIcon())
     frame.Countdown:SetFont(STANDARD_TEXT_FONT, size * 0.6, "OUTLINE")
     frame.Text:SetFont(STANDARD_TEXT_FONT, size * 0.5, "OUTLINE")
-    frame.Text:SetText(string.format("Kick #%d %s", db.myNumber, db.side))
+    frame.Text:SetText(ReminderText())
     frame:SetSize(size + 8 + frame.Text:GetStringWidth(), size)
     frame:ClearAllPoints()
     frame:SetPoint("CENTER", UIParent, "CENTER", db.reminderX, db.reminderY)
 end
 
+-- Unlocked: a static preview that can be dragged; a green border marks it.
+local function ShowPreview()
+    StyleReminder()
+    frame.Border:SetColorTexture(0, 1, 0, 1)
+    frame.Cooldown:Clear()
+    frame.Countdown:SetText(LEAD)
+    frame:Show()
+end
+
+local function EndReminder()
+    hideAt = nil
+    if TFIA.reminderUnlocked then
+        ShowPreview()
+    else
+        frame:Hide()
+    end
+end
+
+frame:SetScript("OnUpdate", function()
+    if not hideAt then return end -- unlocked preview, nothing to count
+    local remaining = hideAt - GetTime()
+    if remaining <= 0 then
+        EndReminder()
+        PlayReminderSound()
+        return
+    end
+    frame.Countdown:SetText(math.ceil(remaining))
+end)
+
 local function ShowReminder(castAt)
     hideAt = castAt
     StyleReminder()
+    frame.Border:SetColorTexture(0, 0, 0, 1)
     frame.Cooldown:SetCooldown(castAt - LEAD, LEAD)
     frame:Show()
 end
+
+-- Dragging -----------------------------------------------------------------------------------
+
+frame:SetMovable(true)
+frame:RegisterForDrag("LeftButton")
+frame:SetScript("OnDragStart", frame.StartMoving)
+frame:SetScript("OnDragStop", function()
+    frame:StopMovingOrSizing()
+    -- Save the new centre offset; the setters re-anchor the frame to the same spot.
+    local x, y = frame:GetCenter()
+    local centerX, centerY = UIParent:GetCenter()
+    TFIA:SetSetting("reminderX", math.floor(x - centerX + 0.5))
+    TFIA:SetSetting("reminderY", math.floor(y - centerY + 0.5))
+end)
+frame:SetScript("OnMouseUp", function(_, button)
+    if button == "RightButton" then
+        TFIA:SetSetting("reminderUnlocked", false)
+    end
+end)
+
+-- Not saved: a reload always starts locked.
+function TFIA:SetReminderUnlocked(unlocked)
+    self.reminderUnlocked = unlocked
+    frame:EnableMouse(unlocked)
+    if unlocked then
+        if not hideAt then
+            ShowPreview()
+        end
+    elseif not hideAt then
+        frame:Hide()
+    end
+end
+
+-- Scheduling ---------------------------------------------------------------------------------
 
 -- (Re)schedules one wave's reminder from its Rouse time. Shows straight away if the lead time
 -- has already started, which is how a re-sync updates a reminder that is already on screen.
@@ -120,8 +185,12 @@ local function ScheduleWave(wave, rouseTime)
     waveTimers[wave] = C_Timer.NewTimer(delay, function() ShowReminder(castAt) end)
 end
 
+local function RemindersWanted()
+    return TFIA.db.reminderEnabled and TFIA:IsAssigned()
+end
+
 function TFIA:StartReminders()
-    if not self.db.reminderEnabled then return end
+    if not RemindersWanted() then return end
     for wave, rouseTime in ipairs(self.WAVE_ROUSE_TIMES) do
         ScheduleWave(wave, self.pullTime + rouseTime)
     end
@@ -132,12 +201,12 @@ function TFIA:StopReminders()
         timer:Cancel()
         waveTimers[wave] = nil
     end
-    frame:Hide()
+    EndReminder()
 end
 
 -- Called by Nameplates.lua with the real Rouse cast start.
 function TFIA:OnRouse(wave, rouseTime)
-    if self.inEncounter and self.db.reminderEnabled then
+    if self.inEncounter and RemindersWanted() then
         ScheduleWave(wave, rouseTime)
     end
 end
@@ -148,7 +217,10 @@ end
 
 -- Re-style a reminder that is on screen, e.g. after a settings change.
 function TFIA:RefreshReminder()
-    if frame:IsShown() then
+    if not frame:IsShown() then return end
+    if hideAt then
         StyleReminder()
+    else
+        ShowPreview()
     end
 end

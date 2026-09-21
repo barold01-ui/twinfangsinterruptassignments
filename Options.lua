@@ -32,13 +32,17 @@ local function AddSlider(key, name, minValue, maxValue, step, tooltip)
     Settings.CreateSlider(category, setting, options, tooltip)
 end
 
--- `values` is a list of strings; each is both the stored value and the label.
-local function AddDropdown(key, name, values, tooltip)
-    local setting = RegisterSetting(key, Settings.VarType.String, name)
+-- `options` is a list of {value, label}; a plain string is both value and label.
+local function AddDropdown(key, name, varType, options, tooltip)
+    local setting = RegisterSetting(key, varType, name)
     local function GetOptions()
         local container = Settings.CreateControlTextContainer()
-        for _, value in ipairs(values) do
-            container:Add(value, value)
+        for _, option in ipairs(options) do
+            if type(option) == "table" then
+                container:Add(option[1], option[2])
+            else
+                container:Add(option, option)
+            end
         end
         return container:GetData()
     end
@@ -69,22 +73,30 @@ function TFIA:InitOptions()
     AddCheckbox("enabled", "Enabled", "Show numbers above add nameplates during The Twin Fangs.")
     AddCheckbox("testMode", "Test mode", "Number every hostile nameplate anywhere, not just during the encounter.")
     AddCheckbox("showAll", "Show all numbers", "Off = only show the boxes for your own number.")
-    AddSlider("myNumber", "My number", 1, 5, 1, "The Broodling pair you are assigned to interrupt.")
-    AddDropdown("side", "My side", {"Left", "Right"}, "Which side of the room you kick on.")
+    AddDropdown("myNumber", "My number", Settings.VarType.Number,
+        {{0, "None"}, {1, "1"}, {2, "2"}, {3, "3"}, {4, "4"}, {5, "5"}},
+        "The Broodling pair you are assigned to interrupt. None = not assigned, no reminder.")
+    AddDropdown("side", "My side", Settings.VarType.String, {"None", "Left", "Right"}, "Which side of the room you kick on.")
     AddSlider("boxSize", "Box size", 10, 100, 1, "Size of the number box.")
     AddSlider("fontSize", "Font size", 8, 60, 1, "Size of the number text.")
     AddSlider("yOffset", "Y offset", -100, 100, 1, "Vertical distance from the top of the nameplate.")
 
     AddHeader("Interrupt Reminder")
     AddCheckbox("reminderEnabled", "Show reminder", "Count down the 5s before your pair's first cast.")
-    AddDropdown("reminderSound", "Sound", LSM:List("sound"), "Played when the countdown ends. /tfia remind to preview.")
+    -- Not a saved setting: the preview always starts locked after a reload.
+    local unlock = Settings.RegisterProxySetting(category, "TFIA_reminderUnlocked", Settings.VarType.Boolean,
+        "Unlock reminder", false,
+        function() return TFIA.reminderUnlocked or false end,
+        function(value) TFIA:SetReminderUnlocked(value) end)
+    Settings.CreateCheckbox(category, unlock, "Show the reminder so you can drag it into place. Right-click it to lock. /tfia unlock does the same.")
+    AddDropdown("reminderSound", "Sound", Settings.VarType.String, LSM:List("sound"), "Played when the countdown ends. /tfia remind to preview.")
     AddSlider("reminderSize", "Reminder size", 16, 128, 1, "Icon size; the text scales with it.")
     AddSlider("reminderX", "Reminder X", -1000, 1000, 1, "Horizontal offset from the centre of the screen.")
     AddSlider("reminderY", "Reminder Y", -600, 600, 1, "Vertical offset from the centre of the screen.")
 
     AddHeader("Raid Leader")
-    AddButton("Assignments", "Open", "Assign players to each kick and broadcast them to the group. Leader and assistants only.",
-        function() TFIA:OpenAssignments() end, TFIA.CanManageAssignments, {"GROUP_ROSTER_UPDATE"})
+    AddButton("Assignments", "Open", "See who kicks what. The leader and assistants can edit and broadcast the list.",
+        function() TFIA:OpenAssignments() end)
     AddButton("Version check", "Check", "Ask everyone in the group which version of the addon they have.",
         function() TFIA:StartVersionCheck() end)
 

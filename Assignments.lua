@@ -38,7 +38,7 @@ function TFIA.CanManageAssignments()
     return not IsInGroup() or UnitIsGroupLeader("player") or UnitIsGroupAssistant("player")
 end
 
--- Sets the player's own number and side from the assignment list, if they are on it.
+-- Sets the player's own number and side from the assignment list; not on it = unassigned.
 -- Goes through the Settings API so an open options panel updates too.
 local function ApplyToPlayer(sender)
     local me = strlower(UnitName("player"))
@@ -52,6 +52,9 @@ local function ApplyToPlayer(sender)
             end
         end
     end
+    TFIA:SetSetting("myNumber", 0)
+    TFIA:SetSetting("side", "None")
+    TFIA:Print("no kick assigned, set by " .. sender)
 end
 
 -- Message: "A:" then the ten names, Left 1-5 first, comma separated. Addon messages cap at 255 bytes.
@@ -146,7 +149,7 @@ local function CreateSlot(side, index, x, y)
         UpdateSlotColor(self)
         UpdateBroadcastButton()
     end)
-    CreatePicker(editbox, side, index)
+    editbox.Picker = CreatePicker(editbox, side, index)
     slots[side][index] = editbox
 end
 
@@ -208,8 +211,9 @@ local function CreateWindow()
     window:Hide() -- so the first Show() runs OnShow
 end
 
--- Reload the boxes from the saved assignments and re-evaluate colours and the broadcast button.
+-- Reload the boxes from the saved assignments; only leader/assistants (or solo) can edit them.
 function TFIA:RefreshAssignments()
+    local canEdit = TFIA.CanManageAssignments()
     for _, side in ipairs(SIDES) do
         for i = 1, SLOTS do
             local editbox = slots[side][i]
@@ -218,6 +222,8 @@ function TFIA:RefreshAssignments()
                 editbox:SetText(name)
             end
             UpdateSlotColor(editbox)
+            editbox:SetEnabled(canEdit)
+            editbox.Picker:SetEnabled(canEdit)
         end
     end
     UpdateBroadcastButton()

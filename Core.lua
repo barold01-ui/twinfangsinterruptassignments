@@ -8,12 +8,12 @@ TFIA.defaults = {
     testMode = false, -- number every hostile nameplate, anywhere
     debug = false,    -- print plate details to chat as they are numbered
     showAll = false,  -- false = only show boxes for my number
-    myNumber = 1,
+    myNumber = 0,     -- 0 = no kick assigned
     boxSize = 50,
     fontSize = 24,
     yOffset = 20,
     reminderEnabled = true, -- "Kick #n Side" countdown before your pair's first cast
-    side = "Left",          -- which side of the room you kick on
+    side = "None",          -- "Left" / "Right", which side of the room you kick on
     reminderSound = "None", -- LibSharedMedia sound name, played when the countdown ends
     reminderSize = 48,
     reminderX = 0,          -- offset from the centre of the screen
@@ -78,6 +78,10 @@ function TFIA:IterateGroupMembers(callback)
             callback(UnitName(unit), select(2, UnitClass(unit)))
         end
     end
+end
+
+function TFIA:IsAssigned()
+    return self.db.myNumber > 0
 end
 
 function TFIA:Print(msg)
@@ -149,6 +153,8 @@ SlashCmdList.TFIA = function(input)
         TFIA:OpenAssignments()
     elseif command == "version" then
         TFIA:StartVersionCheck()
+    elseif command == "unlock" then
+        TFIA:SetSetting("reminderUnlocked", not TFIA.reminderUnlocked)
     elseif command == "remind" then
         TFIA:TestReminder()
     elseif command == "reset" then
