@@ -143,7 +143,11 @@ end
 
 frame:SetMovable(true)
 frame:RegisterForDrag("LeftButton")
-frame:SetScript("OnDragStart", frame.StartMoving)
+frame:SetScript("OnDragStart", function()
+    if TFIA.reminderUnlocked then
+        frame:StartMoving()
+    end
+end)
 frame:SetScript("OnDragStop", function()
     frame:StopMovingOrSizing()
     -- Save the new centre offset; the setters re-anchor the frame to the same spot.
@@ -157,6 +161,8 @@ frame:SetScript("OnMouseUp", function(_, button)
         TFIA:SetSetting("reminderUnlocked", false)
     end
 end)
+-- RegisterForDrag and mouse scripts switch the mouse on; it stays off until unlocked.
+frame:EnableMouse(false)
 
 -- Not saved: a reload always starts locked.
 function TFIA:SetReminderUnlocked(unlocked)

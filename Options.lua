@@ -25,11 +25,76 @@ local function AddCheckbox(key, name, tooltip)
     Settings.CreateCheckbox(category, setting, tooltip)
 end
 
+-- Settings rows are pooled across every addon's panel, so a row keeps its value box but only
+-- shows it while it belongs to one of our sliders.
+local valueBoxes = {} -- slider row frame -> its edit box
+
+local function GetValueBox(row)
+    local box = valueBoxes[row]
+    if not box then
+        box = CreateFrame("EditBox", nil, row, "InputBoxTemplate")
+        box:SetSize(44, 20)
+        box:SetAutoFocus(false)
+        box:SetJustifyH("CENTER")
+        -- Where the slider's own value label would sit.
+        box:SetPoint("LEFT", row.SliderWithSteppers.Slider, "RIGHT", 30, 0)
+        valueBoxes[row] = box
+    end
+    return box
+end
+
+-- Replaces the slider's value label with a box you can type an exact value into.
+local function AddValueBox(initializer, setting, minValue, maxValue, step)
+    local valueChanged = MinimalSliderWithSteppersMixin.Event.OnValueChanged
+
+    local function Snap(value)
+        return Clamp(minValue + math.floor((value - minValue) / step + 0.5) * step, minValue, maxValue)
+    end
+    local function ShowValue(box)
+        box:SetText(tostring(Snap(setting:GetValue())))
+    end
+    -- Bad input just puts the current value back.
+    local function Commit(box)
+        local value = tonumber(box:GetText())
+        if value then
+            setting:SetValue(Snap(value))
+        end
+        ShowValue(box)
+    end
+
+    local baseInitFrame, baseResetter = initializer.InitFrame, initializer.Resetter
+    function initializer:InitFrame(row)
+        baseInitFrame(self, row)
+        local box = GetValueBox(row)
+        box:SetScript("OnEnterPressed", box.ClearFocus)
+        box:SetScript("OnEscapePressed", function()
+            ShowValue(box)
+            box:ClearFocus()
+        end)
+        box:SetScript("OnEditFocusLost", Commit)
+        row.SliderWithSteppers.RightText:Hide()
+        row.SliderWithSteppers:RegisterCallback(valueChanged, function()
+            if not box:HasFocus() then
+                ShowValue(box)
+            end
+        end, box)
+        ShowValue(box)
+        box:Show()
+    end
+    function initializer:Resetter(row)
+        local box = valueBoxes[row]
+        row.SliderWithSteppers:UnregisterCallback(valueChanged, box)
+        box:ClearFocus()
+        box:Hide()
+        baseResetter(self, row)
+    end
+end
+
 local function AddSlider(key, name, minValue, maxValue, step, tooltip)
     local setting = RegisterSetting(key, Settings.VarType.Number, name)
     local options = Settings.CreateSliderOptions(minValue, maxValue, step)
-    options:SetLabelFormatter(MinimalSliderWithSteppersMixin.Label.Right)
-    Settings.CreateSlider(category, setting, options, tooltip)
+    local initializer = Settings.CreateSlider(category, setting, options, tooltip)
+    AddValueBox(initializer, setting, minValue, maxValue, step)
 end
 
 -- `options` is a list of {value, label}; a plain string is both value and label.

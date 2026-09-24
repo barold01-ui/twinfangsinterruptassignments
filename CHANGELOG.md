@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.2.0 (2026-09-24)
+
+- **Reminder only moves when unlocked.** The reminder could be dragged (and blocked clicks)
+  while locked. It now ignores the mouse until you unlock it.
+- **Type exact values.** Every slider in the options has a box beside it. Type a number and
+  press Enter; the arrows and slider still work.
+
 ## 1.1.0 (2026-09-21)
 
 - **No assignment by default.** "My number" and "My side" now have a None option, and None is
