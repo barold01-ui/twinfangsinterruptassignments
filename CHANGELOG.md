@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.2.1 (2026-10-14)
+
+- **Updated for patch 12.1.5.** No other changes.
+
 ## 1.2.0 (2026-09-24)
 
 - **Reminder only moves when unlocked.** The reminder could be dragged (and blocked clicks)
