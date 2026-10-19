@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.3.0 (2026-10-19)
+
+- **Pick your box colours.** Two new options: "Assigned colour" (the box with your number,
+  green by default) and "Non-assigned colour" (every other number, red by default). Click
+  Pick to open the colour picker; Cancel puts the old colour back.
+
 ## 1.2.1 (2026-10-14)
 
 - **Updated for patch 12.1.5.** No other changes.

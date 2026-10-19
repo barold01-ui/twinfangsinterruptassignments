@@ -7,6 +7,7 @@ per add, instead of everyone kicking the same target.
 
 - **Numbered nameplates** — each Broodling gets a numbered box above its nameplate.
   By default you only see the box for *your* number; `Show all` draws every one.
+  Box colours for your number and the others can be picked in the options.
 - **Kick reminder** — a countdown ("Kick #n Left") before your pair's first cast,
   with an optional LibSharedMedia sound.
 - **Assignments** — the raid leader fills in a Left/Right list and broadcasts it;

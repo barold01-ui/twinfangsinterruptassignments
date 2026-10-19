@@ -2,7 +2,7 @@
 ## Title: Twin Fangs Interrupt Assignments
 ## Notes: Numbers add nameplates on The Twin Fangs so interrupts can be assigned per add.
 ## Author: Kinetyk
-## Version: 1.2.1
+## Version: 1.3.0
 ## SavedVariables: TwinFangsInterruptAssignmentsDB
 ## Category: Dungeons & Raids
 ## IconTexture: Interface\Icons\ability_kick

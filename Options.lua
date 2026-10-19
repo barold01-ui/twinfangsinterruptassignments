@@ -127,6 +127,73 @@ local function AddButton(name, buttonText, tooltip, onClick, enabledPredicate, e
     layout:AddInitializer(initializer)
 end
 
+-- The Settings API has no colour picker, so a button row opens Blizzard's and gets a swatch.
+-- Rows are pooled like the slider rows, so the swatch is only shown while the row is ours.
+local swatches = {} -- button row frame -> its colour swatch
+
+local function GetSwatch(row)
+    local swatch = swatches[row]
+    if not swatch then
+        swatch = CreateFrame("Frame", nil, row)
+        swatch:SetSize(20, 20)
+        swatch:SetPoint("LEFT", row.Button, "RIGHT", 10, 0)
+        swatch.Border = swatch:CreateTexture(nil, "BACKGROUND")
+        swatch.Border:SetColorTexture(0, 0, 0, 1)
+        swatch.Border:SetPoint("TOPLEFT", -1, 1)
+        swatch.Border:SetPoint("BOTTOMRIGHT", 1, -1)
+        swatch.Color = swatch:CreateTexture(nil, "ARTWORK")
+        swatch.Color:SetAllPoints()
+        swatches[row] = swatch
+    end
+    return swatch
+end
+
+-- Edits `TFIA.db.colors[colorKey]` live; Cancel puts the old colour back.
+local function OpenColorPicker(colorKey, onChange)
+    local color = TFIA.db.colors[colorKey]
+    local previous = {color[1], color[2], color[3]}
+    local function Apply(r, g, b)
+        color[1], color[2], color[3] = r, g, b
+        onChange()
+    end
+    ColorPickerFrame:SetupColorPickerAndShow({
+        r = color[1], g = color[2], b = color[3],
+        swatchFunc = function() Apply(ColorPickerFrame:GetColorRGB()) end,
+        cancelFunc = function() Apply(unpack(previous)) end,
+    })
+end
+
+local function AddColorPicker(colorKey, name, tooltip)
+    local shownSwatch -- our row's swatch while the row is on screen
+    local function ShowColor()
+        if shownSwatch then
+            shownSwatch.Color:SetColorTexture(unpack(TFIA.db.colors[colorKey]))
+        end
+    end
+    local function OnClick()
+        OpenColorPicker(colorKey, function()
+            ShowColor()
+            TFIA:RefreshNameplates()
+        end)
+    end
+
+    local initializer = CreateSettingsButtonInitializer(name, "Pick", OnClick, tooltip, true)
+    local baseInitFrame, baseResetter = initializer.InitFrame, initializer.Resetter
+    function initializer:InitFrame(row)
+        baseInitFrame(self, row)
+        shownSwatch = GetSwatch(row)
+        ShowColor()
+        shownSwatch:Show()
+    end
+    function initializer:Resetter(row)
+        shownSwatch = nil
+        swatches[row]:Hide()
+        baseResetter(self, row)
+    end
+    local layout = SettingsPanel:GetLayout(category)
+    layout:AddInitializer(initializer)
+end
+
 -- Change a setting from outside the panel so an open panel updates live.
 function TFIA:SetSetting(key, value)
     Settings.SetValue("TFIA_" .. key, value)
@@ -145,6 +212,8 @@ function TFIA:InitOptions()
     AddSlider("boxSize", "Box size", 10, 100, 1, "Size of the number box.")
     AddSlider("fontSize", "Font size", 8, 60, 1, "Size of the number text.")
     AddSlider("yOffset", "Y offset", -100, 100, 1, "Vertical distance from the top of the nameplate.")
+    AddColorPicker("myBox", "Assigned colour", "Colour of the box with your number. Default green is hex 00ff00.")
+    AddColorPicker("box", "Non-assigned colour", "Colour of the boxes with other numbers. Default red is hex ff0000.")
 
     AddHeader("Interrupt Reminder")
     AddCheckbox("reminderEnabled", "Show reminder", "Count down the 5s before your pair's first cast.")
